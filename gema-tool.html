@@ -179,6 +179,11 @@ function openFilm(film) {
   render();
 }
 
+function openFilmById(id) {
+  var film = state.films.find(function(f){ return f.id === id; });
+  if(film) openFilm(film);
+}
+
 function backToFilms() {
   state.view = 'films';
   state.selFilm = null;
@@ -283,14 +288,14 @@ function renderFilmsView() {
   } else {
     listHtml = state.films.map(function(f){
       var meta = [f.year, f.director].filter(Boolean).join(' · ');
-      return '<div class="film-item" onclick="openFilm(' + JSON.stringify(f).replace(/'/g,"\\'") + ')">' +
-        '<div>' +
+      return '<div class="film-item">' +
+        '<div style="flex:1;cursor:pointer;padding:4px 0" onclick="openFilmById(\'' + f.id + '\')">' +
           '<span class="film-name">' + esc(f.title) + '</span>' +
           (meta ? '<span class="film-meta">' + esc(meta) + '</span>' : '') +
         '</div>' +
         '<div class="film-right">' +
-          '<span style="font-size:12px;color:#aaa">Liste öffnen →</span>' +
-          '<button class="btn-danger" onclick="event.stopPropagation();deleteFilm(\'' + f.id + '\')">Löschen</button>' +
+          '<button class="btn-secondary" style="font-size:12px;padding:6px 14px" onclick="openFilmById(\'' + f.id + '\')">Öffnen</button>' +
+          '<button class="btn-danger" onclick="deleteFilm(\'' + f.id + '\')">Löschen</button>' +
         '</div>' +
       '</div>';
     }).join('');
