@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEMA Listenverwaltung</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:14px}
+  #app{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+  h1{font-size:22px;font-weight:600;letter-spacing:-0.3px}
+  h2{font-size:16px;font-weight:600;margin-bottom:1rem}
+  .sub{font-size:13px;color:#666;margin-top:3px}
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem}
+  .hdr-left{display:flex;flex-direction:column}
+  .hdr-btns{display:flex;gap:8px;align-items:center}
+  .status{font-size:12px;color:#888;margin-top:6px}
+  .status.live{color:#2d7d46}
+  button{font-family:inherit;cursor:pointer;font-size:13px;border-radius:8px;transition:all 0.15s}
+  .btn-primary{background:#1a1a1a;color:#fff;border:none;padding:8px 16px;font-weight:500}
+  .btn-primary:hover{background:#333}
+  .btn-primary:disabled{opacity:0.4;cursor:default}
+  .btn-secondary{background:#fff;color:#1a1a1a;border:1px solid #ddd;padding:8px 14px}
+  .btn-secondary:hover{background:#f5f5f3;border-color:#bbb}
+  .btn-secondary:disabled{opacity:0.4;cursor:default}
+  .btn-danger{background:transparent;color:#c0392b;border:1px solid #eee;padding:4px 10px;font-size:12px}
+  .btn-danger:hover{background:#fdf0ee;border-color:#f5c6c1}
+  .btn-back{background:none;border:none;color:#888;font-size:13px;padding:0;margin-bottom:8px;display:flex;align-items:center;gap:4px}
+  .btn-back:hover{color:#1a1a1a}
+  .card{background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:1.25rem}
+  .surface{background:#f0f0ee;border:1px solid #e0e0de;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem}
+  .form-row{display:grid;gap:12px;margin-bottom:12px}
+  .form-row.cols2{grid-template-columns:1fr 1fr}
+  .form-row.cols3{grid-template-columns:1fr 1fr 1fr}
+  .form-row.film{grid-template-columns:1fr 90px 1fr}
+  .form-row.cue{grid-template-columns:2fr 1.5fr 1.5fr 1.2fr 80px 1.5fr}
+  label{font-size:11px;color:#888;margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:0.4px;font-weight:500}
+  input,select,textarea{width:100%;padding:8px 10px;font-size:13px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:#999}
+  .film-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:#fff;border:1px solid #e8e8e6;border-radius:10px;cursor:pointer;margin-bottom:8px;transition:border-color 0.15s,box-shadow 0.15s}
+  .film-item:hover{border-color:#bbb;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+  .film-name{font-weight:600;font-size:14px}
+  .film-meta{font-size:12px;color:#888;margin-left:10px}
+  .film-right{display:flex;align-items:center;gap:10px}
+  .tbl-wrap{border:1px solid #e8e8e6;border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#f7f7f5;padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid #e8e8e6}
+  tbody td{padding:9px 12px;border-top:1px solid #f0f0ee;vertical-align:middle}
+  tbody tr:hover td{background:#fafaf8}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500;background:#e8f4ed;color:#2d7d46}
+  .badge.abspann{background:#e8eef8;color:#2557a7}
+  .badge.titelmusik{background:#fef3e2;color:#b45309}
+  .badge.zitat{background:#f3e8fa;color:#7c3aed}
+  .badge.sonstiges{background:#f0f0ee;color:#666}
+  .empty{text-align:center;padding:3rem 0;color:#999;font-size:14px}
+  .footer{font-size:12px;color:#888;margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+  .err{font-size:12px;color:#c0392b;margin-top:8px}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+var SB_URL  = 'https://rjgjjtwwtfyazgzaegqv.supabase.co';
+var SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZ2pqdHd3dGZ5YXpnemFlZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODMwODksImV4cCI6MjA5MzU1OTA4OX0.LA5WKbpVIP1rTXB6k3sU4SPKVNJB2IYp4mS53xWmOIg';
+
+var USAGE_TYPES = ['unterlegt','Titelmusik','Abspann','Zitat','Sonstiges'];
+
+var state = {
+  view: 'films',       // 'films' | 'cues'
+  films: [],
+  cues: [],
+  selFilm: null,
+  filmFormOpen: false,
+  cueFormOpen: false,
+  loading: false,
+  status: 'verbinde...',
+  statusLive: false,
+  newFilm: {title:'', year:'', director:'', notes:''},
+  newCue: {title:'', composer:'', publisher:'', usage_type:'', duration_seconds:'', scene_note:''}
+};
+
+// ── API ──────────────────────────────────────────────────────
+
+function sbHeaders() {
+  return {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+function sbGet(path) {
+  return fetch(SB_URL + '/rest/v1/' + path, {headers: sbHeaders()})
+    .then(function(r){ return r.json(); });
+}
+
+function sbPost(path, body) {
+  return fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'POST', headers: sbHeaders(), body: JSON.stringify(body)
+  }).then(function(r){ return r.json(); });
+}
+
+function sbPatch(path, body) {
+  return fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'PATCH', headers: sbHeaders(), body: JSON.stringify(body)
+  });
+}
+
+function sbDelete(path) {
+  return fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'DELETE', headers: sbHeaders()
+  });
+}
+
+function loadFilms() {
+  return sbGet('films?order=created_at.desc').then(function(data){
+    state.films = data || [];
+    state.status = '● live';
+    state.statusLive = true;
+  }).catch(function(){
+    state.status = '● Verbindungsfehler';
+    state.statusLive = false;
+  });
+}
+
+function loadCues(filmId) {
+  return sbGet('music_cues?film_id=eq.' + filmId + '&order=created_at.asc').then(function(data){
+    state.cues = data || [];
+  });
+}
+
+// ── Actions ──────────────────────────────────────────────────
+
+function addFilm() {
+  if(!state.newFilm.title.trim()) return;
+  state.loading = true; render();
+  var body = {
+    title: state.newFilm.title,
+    year: state.newFilm.year ? parseInt(state.newFilm.year) : null,
+    director: state.newFilm.director || null,
+    notes: state.newFilm.notes || null
+  };
+  sbPost('films', body).then(function(){
+    state.newFilm = {title:'', year:'', director:'', notes:''};
+    state.filmFormOpen = false;
+    return loadFilms();
+  }).then(function(){
+    state.loading = false;
+    showToast('Film angelegt');
+    render();
+  });
+}
+
+function deleteFilm(id) {
+  if(!confirm('Film und alle Musikstücke löschen?')) return;
+  sbDelete('films?id=eq.' + id).then(function(){
+    if(state.selFilm && state.selFilm.id === id) {
+      state.selFilm = null; state.view = 'films';
+    }
+    return loadFilms();
+  }).then(function(){ render(); });
+}
+
+function openFilm(film) {
+  state.selFilm = film;
+  state.cueFormOpen = false;
+  state.view = 'cues';
+  loadCues(film.id).then(function(){ render(); });
+  render();
+}
+
+function backToFilms() {
+  state.view = 'films';
+  state.selFilm = null;
+  state.cueFormOpen = false;
+  render();
+}
+
+function addCue() {
+  if(!state.newCue.title.trim() || !state.selFilm) return;
+  state.loading = true; render();
+  var body = {
+    film_id: state.selFilm.id,
+    title: state.newCue.title,
+    composer: state.newCue.composer || null,
+    publisher: state.newCue.publisher || null,
+    usage_type: state.newCue.usage_type || null,
+    duration_seconds: state.newCue.duration_seconds ? parseInt(state.newCue.duration_seconds) : null,
+    scene_note: state.newCue.scene_note || null
+  };
+  sbPost('music_cues', body).then(function(){
+    state.newCue = {title:'', composer:'', publisher:'', usage_type:'', duration_seconds:'', scene_note:''};
+    state.cueFormOpen = false;
+    return loadCues(state.selFilm.id);
+  }).then(function(){
+    state.loading = false;
+    showToast('Musikstück hinzugefügt');
+    render();
+  });
+}
+
+function deleteCue(id) {
+  sbDelete('music_cues?id=eq.' + id).then(function(){
+    return loadCues(state.selFilm.id);
+  }).then(function(){ render(); });
+}
+
+function exportCSV() {
+  if(!state.cues.length) return;
+  var headers = ['Titel','Komponist','Verlag','Nutzungsart','Dauer (Sek)','Szene/Timecode'];
+  var rows = state.cues.map(function(c){
+    return [
+      c.title, c.composer||'', c.publisher||'',
+      c.usage_type||'', c.duration_seconds||'', c.scene_note||''
+    ];
+  });
+  var csv = [headers].concat(rows).map(function(r){
+    return r.map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(',');
+  }).join('\n');
+  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'GEMA_' + state.selFilm.title.replace(/[^a-zA-Z0-9]/g,'_') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exportiert');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+// ── Render ───────────────────────────────────────────────────
+
+function badgeClass(type) {
+  if(!type) return '';
+  var map = {unterlegt:'', Titelmusik:'titelmusik', Abspann:'abspann', Zitat:'zitat', Sonstiges:'sonstiges'};
+  return map[type] || '';
+}
+
+function renderFilmsView() {
+  var formHtml = '';
+  if(state.filmFormOpen) {
+    formHtml = '<div class="surface">' +
+      '<h2>Neuer Film</h2>' +
+      '<div class="form-row film">' +
+        '<div><label>Titel *</label><input id="nf-title" placeholder="Filmtitel" value="' + esc(state.newFilm.title) + '" oninput="state.newFilm.title=this.value"></div>' +
+        '<div><label>Jahr</label><input id="nf-year" type="number" placeholder="2024" value="' + esc(state.newFilm.year) + '" oninput="state.newFilm.year=this.value"></div>' +
+        '<div><label>Regie</label><input id="nf-dir" placeholder="Name" value="' + esc(state.newFilm.director) + '" oninput="state.newFilm.director=this.value"></div>' +
+      '</div>' +
+      '<div class="form-row" style="grid-template-columns:1fr;margin-bottom:14px">' +
+        '<div><label>Notizen</label><input id="nf-notes" placeholder="Optional" value="' + esc(state.newFilm.notes) + '" oninput="state.newFilm.notes=this.value"></div>' +
+      '</div>' +
+      '<button class="btn-primary" onclick="addFilm()" ' + (state.loading || !state.newFilm.title.trim() ? 'disabled' : '') + '>' +
+        (state.loading ? 'Speichern...' : 'Film anlegen') +
+      '</button>' +
+    '</div>';
+  }
+
+  var listHtml = '';
+  if(state.films.length === 0) {
+    listHtml = '<p class="empty">Noch keine Filme angelegt.<br>Lege deinen ersten Film an.</p>';
+  } else {
+    listHtml = state.films.map(function(f){
+      var meta = [f.year, f.director].filter(Boolean).join(' · ');
+      return '<div class="film-item" onclick="openFilm(' + JSON.stringify(f).replace(/'/g,"\\'") + ')">' +
+        '<div>' +
+          '<span class="film-name">' + esc(f.title) + '</span>' +
+          (meta ? '<span class="film-meta">' + esc(meta) + '</span>' : '') +
+        '</div>' +
+        '<div class="film-right">' +
+          '<span style="font-size:12px;color:#aaa">Liste öffnen →</span>' +
+          '<button class="btn-danger" onclick="event.stopPropagation();deleteFilm(\'' + f.id + '\')">Löschen</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  return '<div class="hdr">' +
+    '<div class="hdr-left">' +
+      '<h1>GEMA Listenverwaltung</h1>' +
+      '<div class="status ' + (state.statusLive ? 'live' : '') + '">' + state.status + '</div>' +
+    '</div>' +
+    '<div class="hdr-btns">' +
+      '<button class="btn-secondary" onclick="toggleFilmForm()">' + (state.filmFormOpen ? '✕ Abbrechen' : '+ Film anlegen') + '</button>' +
+    '</div>' +
+  '</div>' +
+  formHtml + listHtml;
+}
+
+function renderCuesView() {
+  var f = state.selFilm;
+  var totalSec = state.cues.reduce(function(s,c){ return s + (c.duration_seconds||0); }, 0);
+  var totalMin = Math.floor(totalSec / 60);
+  var totalSecRest = totalSec % 60;
+
+  var formHtml = '';
+  if(state.cueFormOpen) {
+    var usageOptions = '<option value="">— wählen —</option>' +
+      USAGE_TYPES.map(function(u){
+        return '<option value="' + u + '"' + (state.newCue.usage_type===u?' selected':'') + '>' + u + '</option>';
+      }).join('');
+
+    formHtml = '<div class="surface">' +
+      '<h2>Neues Musikstück</h2>' +
+      '<div class="form-row cue">' +
+        '<div><label>Titel *</label><input placeholder="Musikstück" value="' + esc(state.newCue.title) + '" oninput="state.newCue.title=this.value"></div>' +
+        '<div><label>Komponist</label><input placeholder="Name" value="' + esc(state.newCue.composer) + '" oninput="state.newCue.composer=this.value"></div>' +
+        '<div><label>Verlag</label><input placeholder="Verlagsname" value="' + esc(state.newCue.publisher) + '" oninput="state.newCue.publisher=this.value"></div>' +
+        '<div><label>Nutzungsart</label><select onchange="state.newCue.usage_type=this.value">' + usageOptions + '</select></div>' +
+        '<div><label>Dauer (s)</label><input type="number" placeholder="120" value="' + esc(state.newCue.duration_seconds) + '" oninput="state.newCue.duration_seconds=this.value"></div>' +
+        '<div><label>Szene / Timecode</label><input placeholder="00:12:30" value="' + esc(state.newCue.scene_note) + '" oninput="state.newCue.scene_note=this.value"></div>' +
+      '</div>' +
+      '<button class="btn-primary" onclick="addCue()" ' + (state.loading || !state.newCue.title.trim() ? 'disabled' : '') + '>' +
+        (state.loading ? 'Speichern...' : 'Hinzufügen') +
+      '</button>' +
+    '</div>';
+  }
+
+  var tableHtml = '';
+  if(state.cues.length === 0) {
+    tableHtml = '<p class="empty">Noch keine Musikstücke erfasst.</p>';
+  } else {
+    var rows = state.cues.map(function(c){
+      return '<tr>' +
+        '<td style="font-weight:500">' + esc(c.title) + '</td>' +
+        '<td style="color:#666">' + esc(c.composer||'—') + '</td>' +
+        '<td style="color:#666">' + esc(c.publisher||'—') + '</td>' +
+        '<td>' + (c.usage_type ? '<span class="badge ' + badgeClass(c.usage_type) + '">' + esc(c.usage_type) + '</span>' : '<span style="color:#ccc">—</span>') + '</td>' +
+        '<td style="color:#666">' + (c.duration_seconds ? c.duration_seconds + 's' : '—') + '</td>' +
+        '<td style="color:#666">' + esc(c.scene_note||'—') + '</td>' +
+        '<td><button class="btn-danger" onclick="deleteCue(\'' + c.id + '\')">✕</button></td>' +
+      '</tr>';
+    }).join('');
+
+    tableHtml = '<div class="tbl-wrap"><table>' +
+      '<thead><tr><th>Titel</th><th>Komponist</th><th>Verlag</th><th>Nutzungsart</th><th>Dauer</th><th>Szene</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table></div>';
+  }
+
+  var meta = [f.year, f.director].filter(Boolean).join(' · ');
+
+  return '<div>' +
+    '<button class="btn-back" onclick="backToFilms()">← Alle Filme</button>' +
+    '<div class="hdr">' +
+      '<div class="hdr-left">' +
+        '<h1>' + esc(f.title) + '</h1>' +
+        (meta ? '<div class="sub">' + esc(meta) + '</div>' : '') +
+      '</div>' +
+      '<div class="hdr-btns">' +
+        '<button class="btn-secondary" onclick="exportCSV()" ' + (!state.cues.length ? 'disabled' : '') + '>↓ CSV Export</button>' +
+        '<button class="btn-secondary" onclick="toggleCueForm()">' + (state.cueFormOpen ? '✕ Abbrechen' : '+ Musikstück') + '</button>' +
+      '</div>' +
+    '</div>' +
+    formHtml +
+    tableHtml +
+    (state.cues.length > 0 ? '<div class="footer"><span>' + state.cues.length + ' Stück' + (state.cues.length!==1?'e':'') + '</span><span>Gesamtdauer: ' + totalMin + ':' + String(totalSecRest).padStart(2,'0') + ' Min.</span></div>' : '') +
+  '</div>';
+}
+
+function toggleFilmForm() {
+  state.filmFormOpen = !state.filmFormOpen;
+  render();
+}
+
+function toggleCueForm() {
+  state.cueFormOpen = !state.cueFormOpen;
+  render();
+}
+
+function esc(str) {
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function render() {
+  var app = document.getElementById('app');
+  if(state.view === 'films') {
+    app.innerHTML = renderFilmsView();
+  } else if(state.view === 'cues') {
+    app.innerHTML = renderCuesView();
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────
+
+render();
+loadFilms().then(function(){ render(); });
+
+</script>
+</body>
+</html>
