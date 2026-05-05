@@ -138,13 +138,17 @@ function loadCues(filmId) {
 // ── Actions ──────────────────────────────────────────────────
 
 function addFilm() {
-  if(!state.newFilm.title.trim()) return;
+  var title = (document.getElementById('nf-title')||{}).value || state.newFilm.title;
+  var year  = (document.getElementById('nf-year')||{}).value  || state.newFilm.year;
+  var dir   = (document.getElementById('nf-dir')||{}).value   || state.newFilm.director;
+  var notes = (document.getElementById('nf-notes')||{}).value || state.newFilm.notes;
+  if(!title.trim()) { alert('Bitte einen Filmtitel eingeben.'); return; }
   state.loading = true; render();
   var body = {
-    title: state.newFilm.title,
-    year: state.newFilm.year ? parseInt(state.newFilm.year) : null,
-    director: state.newFilm.director || null,
-    notes: state.newFilm.notes || null
+    title: title,
+    year: year ? parseInt(year) : null,
+    director: dir || null,
+    notes: notes || null
   };
   sbPost('films', body).then(function(){
     state.newFilm = {title:'', year:'', director:'', notes:''};
@@ -183,16 +187,22 @@ function backToFilms() {
 }
 
 function addCue() {
-  if(!state.newCue.title.trim() || !state.selFilm) return;
+  var title    = (document.getElementById('nc-title')||{value:''}).value || state.newCue.title;
+  var composer = (document.getElementById('nc-comp')||{value:''}).value;
+  var pub      = (document.getElementById('nc-pub')||{value:''}).value;
+  var usage    = (document.getElementById('nc-type')||{value:''}).value;
+  var dur      = (document.getElementById('nc-dur')||{value:''}).value;
+  var scene    = (document.getElementById('nc-scene')||{value:''}).value;
+  if(!title.trim() || !state.selFilm) { alert('Bitte einen Titel eingeben.'); return; }
   state.loading = true; render();
   var body = {
     film_id: state.selFilm.id,
-    title: state.newCue.title,
-    composer: state.newCue.composer || null,
-    publisher: state.newCue.publisher || null,
-    usage_type: state.newCue.usage_type || null,
-    duration_seconds: state.newCue.duration_seconds ? parseInt(state.newCue.duration_seconds) : null,
-    scene_note: state.newCue.scene_note || null
+    title: title,
+    composer: composer || null,
+    publisher: pub || null,
+    usage_type: usage || null,
+    duration_seconds: dur ? parseInt(dur) : null,
+    scene_note: scene || null
   };
   sbPost('music_cues', body).then(function(){
     state.newCue = {title:'', composer:'', publisher:'', usage_type:'', duration_seconds:'', scene_note:''};
@@ -261,7 +271,7 @@ function renderFilmsView() {
       '<div class="form-row" style="grid-template-columns:1fr;margin-bottom:14px">' +
         '<div><label>Notizen</label><input id="nf-notes" placeholder="Optional" value="' + esc(state.newFilm.notes) + '" oninput="state.newFilm.notes=this.value"></div>' +
       '</div>' +
-      '<button class="btn-primary" onclick="addFilm()" ' + (state.loading || !state.newFilm.title.trim() ? 'disabled' : '') + '>' +
+      '<button class="btn-primary" onclick="addFilm()" ' + (state.loading ? 'disabled' : '') + '>' +
         (state.loading ? 'Speichern...' : 'Film anlegen') +
       '</button>' +
     '</div>';
@@ -321,7 +331,7 @@ function renderCuesView() {
         '<div><label>Dauer (s)</label><input type="number" placeholder="120" value="' + esc(state.newCue.duration_seconds) + '" oninput="state.newCue.duration_seconds=this.value"></div>' +
         '<div><label>Szene / Timecode</label><input placeholder="00:12:30" value="' + esc(state.newCue.scene_note) + '" oninput="state.newCue.scene_note=this.value"></div>' +
       '</div>' +
-      '<button class="btn-primary" onclick="addCue()" ' + (state.loading || !state.newCue.title.trim() ? 'disabled' : '') + '>' +
+      '<button class="btn-primary" onclick="addCue()" ' + (state.loading ? 'disabled' : '') + '>' +
         (state.loading ? 'Speichern...' : 'Hinzufügen') +
       '</button>' +
     '</div>';
